@@ -33,10 +33,25 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct 
+
+typedef struct Menutypedef;
+typedef struct ItemTypedef;
+
+typedef struct Menutypedef
+{
+  char *menuName;
+  ItemTypedef *itemList;
+  Menutypedef *parentMenu; // 父级菜单指针
+  uint16_t itemCount;
+}Menutypedef;
+
+typedef struct ItemTypedef
 {
   char *str;
   uint8_t len;
+  void (*Function)(void);
+  Menutypedef *subMenu; // 子级菜单指针
+
 }ItemTypedef;
 
 
@@ -98,22 +113,22 @@ typedef enum
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-ItemTypedef itemList[] = 
+ItemTypedef meanItemList[] = 
 {
-  {"List", 4},
-  {"a", 1},
-  {"wqweqw", 6},
-  {"sds", 3},
-  {"List_E", 6},
-  {"afsadf", 6},
-  {"wode", 4},
-  {"List", 4},
-  {"a", 1},
-  {"wqweqw", 6},
-  {"sds", 3},
-  {"List_E", 6},
-  {"afsadf", 6},
-  {"wode", 4}
+  {"List", 4, NULL, NULL},
+  {"a", 1, NULL, NULL},
+  {"wqweqw", 6, NULL, NULL},
+  {"sds", 3, NULL, NULL},
+  {"List_E", 6, NULL, NULL},
+  {"afsadf", 6, NULL, NULL},
+  {"wode", 4, NULL, NULL},
+  {"List", 4, NULL, NULL},
+  {"a", 1, NULL, NULL},
+  {"wqweqw", 6, NULL, NULL},
+  {"sds", 3, NULL, NULL},
+  {"List_E", 6, NULL, NULL},
+  {"afsadf", 6, NULL, NULL},
+  {"wode", 4, NULL, NULL}
 };
 
 KeyTypdef KeyList[2] = {0};
