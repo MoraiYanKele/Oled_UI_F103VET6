@@ -21,6 +21,7 @@ void OLED_SetPixel(int16_t x, int16_t y, OLED_ColorMode color);
 void OLED_DrawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, OLED_ColorMode color);
 void OLED_DrawRectangle(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color);
 void OLED_DrawFilledRectangle(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color);
+void OLED_DrawFilledRectangleWithCorners(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color);
 void OLED_DrawTriangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t x3, uint8_t y3, OLED_ColorMode color);
 void OLED_DrawFilledTriangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t x3, uint8_t y3, OLED_ColorMode color);
 void OLED_DrawCircle(uint8_t x, uint8_t y, uint8_t r, OLED_ColorMode color);

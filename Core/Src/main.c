@@ -34,15 +34,17 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-typedef struct Menutypedef;
-typedef struct ItemTypedef;
+struct Menutypedef ;
+struct ItemTypedef ;
 
 typedef struct Menutypedef
 {
   char *menuName;
-  ItemTypedef *itemList;
-  Menutypedef *parentMenu; // 父级菜单指针
+  struct ItemTypedef *items;
+  struct Menutypedef *parentMenu; // 父级菜单指针
   uint16_t itemCount;
+  int currentItemIndex;
+
 }Menutypedef;
 
 typedef struct ItemTypedef
@@ -50,7 +52,7 @@ typedef struct ItemTypedef
   char *str;
   uint8_t len;
   void (*Function)(void);
-  Menutypedef *subMenu; // 子级菜单指针
+  struct Menutypedef *subMenu; // 子级菜单指针
 
 }ItemTypedef;
 
@@ -103,6 +105,9 @@ typedef enum
 #define OLED_SCREEN_HEIGHT  64
 #define MENU_ITEM_HEIGHT    16
 
+#define SCROLLBAR_WIDTH    2
+#define SCROLLBAR_MARGIN   3
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -113,9 +118,14 @@ typedef enum
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-ItemTypedef meanItemList[] = 
+
+extern Menutypedef mainMenu;
+extern Menutypedef listMenu;
+
+
+ItemTypedef mainMenuItems[] = 
 {
-  {"List", 4, NULL, NULL},
+  {"List", 4, NULL, &listMenu},
   {"a", 1, NULL, NULL},
   {"wqweqw", 6, NULL, NULL},
   {"sds", 3, NULL, NULL},
@@ -129,9 +139,29 @@ ItemTypedef meanItemList[] =
   {"List_E", 6, NULL, NULL},
   {"afsadf", 6, NULL, NULL},
   {"wode", 4, NULL, NULL}
-
-  
 };
+
+ItemTypedef listMenuItems[] = 
+{
+  {"List1", 5, NULL, NULL},
+  {"a1", 3, NULL, NULL},
+  {"wqweqw1", 7, NULL, NULL},
+  {"sds1", 4, NULL, NULL},
+  {"List_E1", 7, NULL, NULL},
+  {"afsad1", 7, NULL, NULL},
+  {"wode1", 5, NULL, NULL},
+  {"List1", 5, NULL, NULL},
+  {"a1", 2, NULL, NULL},
+  {"wqweqw1", 7, NULL, NULL},
+  {"sds1", 4, NULL, NULL},
+  {"List_E1", 7, NULL, NULL},
+  {"afsadf1", 7, NULL, NULL},
+  {"wode1", 5, NULL, NULL}
+};
+
+Menutypedef mainMenu = {"mainMenu", mainMenuItems, NULL, sizeof(mainMenuItems) / sizeof(ItemTypedef), 0};
+Menutypedef listMenu = {"listMenu", listMenuItems, &mainMenu, sizeof(listMenuItems) / sizeof(ItemTypedef), 0};
+Menutypedef *currentMenu = &mainMenu;
 
 KeyTypdef KeyList[2] = {0};
 
@@ -147,8 +177,8 @@ ScreenIndexTypedef screenIndex = {0, 3};
 
 // 0:没有按键响应 1:KEY1 2:KEY2
 uint8_t keyID = 0;
-int8_t itemIndex = 0;
-uint16_t listLen = 0;
+
+// uint16_t listLen = 0;
 float moveProcess_Frame = 0.0;
 float moveProcess_Screen = 0.0;
 
@@ -220,6 +250,23 @@ void Frame_UpData();
 void Screen_UpData();
 void UI_Show();
 float easeInOut(float t);
+
+void Draw_ScrollBar(int16_t screenTop, int16_t itemCount, int16_t visibleItems, int currentIndex)
+{
+
+  int16_t scrollbarHeight = 8;
+  int16_t scrollbarPosition = ((OLED_SCREEN_HEIGHT - scrollbarHeight) / itemCount) * currentIndex;
+  
+  int16_t scrollbarTop = scrollbarPosition;
+  int16_t scrollbarBottom = scrollbarTop + scrollbarHeight;
+  printf("%d, %d, %d, %d\n", scrollbarHeight, scrollbarPosition, scrollbarTop, scrollbarBottom);
+  OLED_DrawFilledRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN,
+                            scrollbarTop,
+                            SCROLLBAR_WIDTH,
+                            scrollbarHeight,
+                            OLED_COLOR_NORMAL);
+  OLED_DrawRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN - 2, 0, 6, OLED_SCREEN_HEIGHT - 1, OLED_COLOR_NORMAL);
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -270,13 +317,12 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   printf("ready:)\n");
-  frameY.targetVal = itemIndex * MENU_ITEM_HEIGHT;
-  frameWidth.targetVal = itemList[itemIndex].len * 6 + 4;
-  frameWidth.val = itemList[itemIndex].len * 6 + 4;
+  frameY.targetVal = currentMenu->currentItemIndex * MENU_ITEM_HEIGHT;
+  frameWidth.targetVal = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
+  frameWidth.val = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
 
   while (1)
   {
-    listLen = sizeof(itemList) / sizeof(ItemTypedef);
     ItemIndex_UpData();
     Frame_Move(&frameY, &frameWidth, 0.1);
     Screen_Move(&screenTop, 0.1);
@@ -348,21 +394,21 @@ void ItemIndex_UpData()
     KeyList[keyID - 1].updateFlag = 0;
     if (keyID == 1)
     {
-      itemIndex++;
+      currentMenu->currentItemIndex++;
       
     }
     else if (keyID == 2)
     {
-      itemIndex--;
+      currentMenu->currentItemIndex--;
     }
 
-    if (itemIndex == listLen)
+    if (currentMenu->currentItemIndex == currentMenu->itemCount)
     {
-      itemIndex = 0;
+      currentMenu->currentItemIndex = 0;
     }
-    else if (itemIndex == -1)
+    else if (currentMenu->currentItemIndex == -1)
     {
-      itemIndex = listLen - 1;
+      currentMenu->currentItemIndex = currentMenu->itemCount - 1;
     }
     
 
@@ -377,22 +423,22 @@ void Frame_UpData()
   frameY.lastVal = frameY.targetVal;
   frameWidth.lastVal = frameWidth.targetVal;
   
-  frameY.targetVal = itemIndex * MENU_ITEM_HEIGHT;
-  frameWidth.targetVal = itemList[itemIndex].len * 6 + 4;
+  frameY.targetVal = currentMenu->currentItemIndex * MENU_ITEM_HEIGHT;
+  frameWidth.targetVal = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
 }
 
 void Screen_UpData()
 {
-  if (itemIndex > screenIndex.bottomIndex)
+  if (currentMenu->currentItemIndex > screenIndex.bottomIndex)
   {
     moveProcess_Screen = 0.0;
-    screenIndex.bottomIndex = itemIndex;
+    screenIndex.bottomIndex = currentMenu->currentItemIndex;
     screenIndex.topIndex = screenIndex.bottomIndex - 3;
   }
-  else if (itemIndex < screenIndex.topIndex)
+  else if (currentMenu->currentItemIndex < screenIndex.topIndex)
   {
     moveProcess_Screen = 0.0;
-    screenIndex.topIndex = itemIndex;
+    screenIndex.topIndex = currentMenu->currentItemIndex;
     screenIndex.bottomIndex = screenIndex.topIndex + 3;
   }
 
@@ -464,12 +510,12 @@ uint8_t Frame_Move(UIContextTypedef *frameY, UIContextTypedef *frameWidth, float
 void UI_Show()
 {
   OLED_NewFrame();
-  printf("%d, %d\n", screenTop.val, frameY.val);
   for (int i = -1; i < 5; i++)
   {
-    OLED_PrintASCIIString(2, screenTop.targetVal - screenTop.val + (i * MENU_ITEM_HEIGHT) + 4, itemList[i + screenIndex.topIndex].str, &afont8x6, OLED_COLOR_NORMAL); 
+    OLED_PrintASCIIString(2, screenTop.targetVal - screenTop.val + (i * MENU_ITEM_HEIGHT) + 4, currentMenu->items[i + screenIndex.topIndex].str, &afont8x6, OLED_COLOR_NORMAL); 
   }
-  OLED_DrawFilledRectangle(0, frameY.val + 1 - (screenIndex.topIndex * MENU_ITEM_HEIGHT), frameWidth.val, MENU_ITEM_HEIGHT - 2, OLED_COLOR_REVERSED); 
+  OLED_DrawFilledRectangleWithCorners(0, frameY.val + 1 - (screenIndex.topIndex * MENU_ITEM_HEIGHT), frameWidth.val, MENU_ITEM_HEIGHT - 2, OLED_COLOR_REVERSED); 
+  Draw_ScrollBar(screenTop.targetVal, currentMenu->itemCount, 4, currentMenu->currentItemIndex);
   OLED_ShowFrame();
 }
 
@@ -480,6 +526,7 @@ float easeInOut(float t)
   else
     return -1 + (4 - 2 * t) * t;
 }
+
 /* USER CODE END 4 */
 
 /**

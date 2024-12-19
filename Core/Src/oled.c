@@ -457,21 +457,10 @@ void OLED_DrawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, OLED_ColorMod
  */
 void OLED_DrawRectangle(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color)
 {
-  OLED_DrawLine(x + 2, y, x + w - 2, y, color);
-  OLED_DrawLine(x + 2, y + h, x + w - 2, y + h, color);
-  OLED_DrawLine(x, y + 2, x, y + h - 2, color);
-  OLED_DrawLine(x + w, y + 2, x + w, y + h - 2, color);
-
-  OLED_DrawLine(x, y + 2, x + 2, y + 2, color);
-  OLED_DrawLine(x + w - 2, y + 2, x + w, y + 2, color);
-  OLED_DrawLine(x + 2, y, x + 2, y + 2, color);
-  OLED_DrawLine(x + w - 2, y, x + w - 2, y + 2, color);
-
-  OLED_DrawLine(x, y + h - 2, x + 2, y + h - 2, color);
-  OLED_DrawLine(x + w - 2, y + h - 2, x + w, y + h - 2, color);
-  OLED_DrawLine(x + 2, y + h - 2, x + 2, y + h, color);
-  OLED_DrawLine(x + w - 2, y + h - 2, x + w - 2, y + h, color);
-
+  OLED_DrawLine(x, y, x + w, y, color);
+  OLED_DrawLine(x, y + h, x + w, y + h, color);
+  OLED_DrawLine(x, y, x, y + h, color);
+  OLED_DrawLine(x + w, y, x + w, y + h, color);
 }
 
 /**
@@ -482,7 +471,24 @@ void OLED_DrawRectangle(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMo
  * @param h 矩形高度
  * @param color 颜色
  */
+
 void OLED_DrawFilledRectangle(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color)
+{
+  for (uint8_t i = 0; i < h; i++)
+  {
+    OLED_DrawLine(x, y + i, x + w, y + i, color);
+  }
+}
+
+/**
+ * @brief 绘制一个填充圆角矩形
+ * @param x 起始点横坐标
+ * @param y 起始点纵坐标
+ * @param w 矩形宽度
+ * @param h 矩形高度
+ * @param color 颜色
+ */
+void OLED_DrawFilledRectangleWithCorners(int16_t x, int16_t y, uint8_t w, uint8_t h, OLED_ColorMode color)
 {
   for (uint8_t i = 0; i < 2; i++)
   {
