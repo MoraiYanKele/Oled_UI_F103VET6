@@ -63,15 +63,18 @@ typedef struct
   int16_t targetVal;
   int16_t lastVal;
 
-}UIContextTypedef;
+}UIElemTypedef;
 
 
-typedef struct 
-{
-  uint8_t val;
-  uint8_t lastVal;
-  uint8_t updateFlag;
-}KeyTypdef;
+typedef struct {
+  uint8_t val;            // 当前值
+  uint8_t lastVal;        // 上一次值
+  uint8_t updateFlag;     // 更新标志
+  uint8_t shortPress;     // 短按标志
+  uint8_t longPress;      // 长按标志
+  uint32_t pressTime;     // 按下时间
+  uint32_t releaseTime;   // 抬起时间
+} KeyTypeDef;
 
 
 typedef struct
@@ -107,6 +110,8 @@ typedef enum
 
 #define SCROLLBAR_WIDTH    2
 #define SCROLLBAR_MARGIN   3
+
+#define LONG_PRESS_THRESHOLD 600 // ms
 
 /* USER CODE END PD */
 
@@ -163,24 +168,30 @@ Menutypedef mainMenu = {"mainMenu", mainMenuItems, NULL, sizeof(mainMenuItems) /
 Menutypedef listMenu = {"listMenu", listMenuItems, &mainMenu, sizeof(listMenuItems) / sizeof(ItemTypedef), 0};
 Menutypedef *currentMenu = &mainMenu;
 
-KeyTypdef KeyList[2] = {0};
+KeyTypeDef KeyList[2] = {0};
 
-UIContextTypedef itemX = {0};
-UIContextTypedef itemY = {0};
 
-UIContextTypedef frameWidth = {0};
-UIContextTypedef frameY = {0};
+UIElemTypedef itemX = {0};
+UIElemTypedef itemY = {0};
 
-UIContextTypedef screenTop = {0};
-UIContextTypedef screenBottom = {0};
+UIElemTypedef frameWidth = {0};
+UIElemTypedef frameY = {0};
+
+UIElemTypedef screenTop = {0};
+UIElemTypedef screenBottom = {0};
+
+UIElemTypedef scrollBarY = {0};
+
 ScreenIndexTypedef screenIndex = {0, 3};
 
 // 0:没有按键响应 1:KEY1 2:KEY2
 uint8_t keyID = 0;
 
 // uint16_t listLen = 0;
-float moveProcess_Frame = 0.0;
+float moveProcess_FrameY = 0.0;
+float moveProcess_FrameWidth = 0.0;
 float moveProcess_Screen = 0.0;
+float moveProcess_ScrollBar = 0.0;
 
 /* USER CODE END PV */
 
@@ -201,72 +212,89 @@ int fgetc(FILE *f)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == GPIO_PIN_0)
+  
+  uint32_t currentTime = HAL_GetTick();
+
+  if (GPIO_Pin == GPIO_PIN_13)
   {
-    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET)
+    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET)
     {
       KeyList[0].val = 1;
+      KeyList[0].pressTime = currentTime;
       keyID = 1;
     }
     else 
     {
       KeyList[0].val = 0;
-      keyID = 0;
+      KeyList[0].releaseTime = currentTime;
+      
+
+      uint32_t pressDuration = KeyList[0].releaseTime - KeyList[0].pressTime;
+      if (pressDuration >= LONG_PRESS_THRESHOLD)
+      {
+        KeyList[0].longPress = 1;  // 长按
+        
+      }
+      else
+      {
+        KeyList[0].longPress = 2;// 短按
+      }
     }
 
-    if (KeyList[0].val != KeyList[0].lastVal)
+    
+
+    if (!KeyList[0].val && KeyList[0].longPress)
     {
-      KeyList[0].lastVal = KeyList[0].val;
       KeyList[0].updateFlag = 1;
     }
+
   }
-  else if (GPIO_Pin == GPIO_PIN_13)
+  else if (GPIO_Pin == GPIO_PIN_0)
   {
-    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET)
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET)
     {
       KeyList[1].val = 1;
+      KeyList[1].pressTime = currentTime;
       keyID = 2;
     }
     else 
     {
       KeyList[1].val = 0;
-      keyID = 0;
+      KeyList[1].releaseTime = currentTime;
+
+      uint32_t pressDuration = KeyList[1].releaseTime - KeyList[1].pressTime;
+      if (pressDuration >= LONG_PRESS_THRESHOLD)
+      {
+        KeyList[1].longPress = 1;  // 长按
+        
+      }
+      else
+      {
+        KeyList[1].longPress = 2;// 短按
+      }
+      
     }
 
-    if (KeyList[1].val != KeyList[1].lastVal)
+    if (!KeyList[1].val && KeyList[1].longPress)
     {
-      KeyList[1].lastVal = KeyList[1].val;
       KeyList[1].updateFlag = 1;
     }
   }
 }
 
 // 返回值： 1： 到达目标哦位置； 0： 没有到达目标位置
-uint8_t Frame_Move(UIContextTypedef *frameY, UIContextTypedef *frameWidth, float moveSpeed);
-uint8_t Screen_Move(UIContextTypedef *screenTop, float moveSpeed);
+uint8_t UI_Move(UIElemTypedef *elem, float *moveProcess, float moveSpeed);
+// uint8_t Frame_Move(UIElemTypedef *frameY, UIElemTypedef *frameWidth, float moveSpeed);
+uint8_t Screen_Move(UIElemTypedef *screenTop, float moveSpeed);
 void Key_Init();
 void ItemIndex_UpData();
-void Frame_UpData();
-void Screen_UpData();
+void Frame_Update();
+void Screen_Update();
+void ScrollBar_Update(void);
 void UI_Show();
 float easeInOut(float t);
 
-void Draw_ScrollBar(int16_t screenTop, int16_t itemCount, int16_t visibleItems, int currentIndex)
-{
 
-  int16_t scrollbarHeight = 8;
-  int16_t scrollbarPosition = ((OLED_SCREEN_HEIGHT - scrollbarHeight) / itemCount) * currentIndex;
-  
-  int16_t scrollbarTop = scrollbarPosition;
-  int16_t scrollbarBottom = scrollbarTop + scrollbarHeight;
-  printf("%d, %d, %d, %d\n", scrollbarHeight, scrollbarPosition, scrollbarTop, scrollbarBottom);
-  OLED_DrawFilledRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN,
-                            scrollbarTop,
-                            SCROLLBAR_WIDTH,
-                            scrollbarHeight,
-                            OLED_COLOR_NORMAL);
-  OLED_DrawRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN - 2, 0, 6, OLED_SCREEN_HEIGHT - 1, OLED_COLOR_NORMAL);
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -320,16 +348,22 @@ int main(void)
   frameY.targetVal = currentMenu->currentItemIndex * MENU_ITEM_HEIGHT;
   frameWidth.targetVal = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
   frameWidth.val = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
-
+  scrollBarY.targetVal = 2;
   while (1)
   {
+ 
     ItemIndex_UpData();
-    Frame_Move(&frameY, &frameWidth, 0.1);
-    Screen_Move(&screenTop, 0.1);
+    UI_Move(&frameY, &moveProcess_FrameY, 0.1);
+    UI_Move(&frameWidth, &moveProcess_FrameWidth, 0.1);
+    UI_Move(&screenTop, &moveProcess_Screen, 0.1);
+    UI_Move(&scrollBarY, &moveProcess_ScrollBar, 0.1);
+    // Frame_Move(&frameY, &frameWidth, 0.1);
+    // Screen_Move(&screenTop, 0.1);
     UI_Show();
-    // printf("%d\n", itemIndex);
+
+    // printf("%d\n", (OLED_SCREEN_HEIGHT * 4) / currentMenu->itemCount);
        
-    // printf("%d\n", xMove);
+    // printf("%d, %d, %d\n", frameY.val, frameWidth.val, screenTop.val);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -388,7 +422,7 @@ void Key_Init()
 
 void ItemIndex_UpData()
 {
-  if (KeyList[keyID - 1].updateFlag && KeyList[keyID - 1].val && keyID)
+  if (KeyList[keyID - 1].updateFlag && KeyList[keyID - 1].longPress == 2)
   {
     
     KeyList[keyID - 1].updateFlag = 0;
@@ -412,14 +446,17 @@ void ItemIndex_UpData()
     }
     
 
-    Frame_UpData();
-    Screen_UpData();
+    Frame_Update();
+    Screen_Update();
+    ScrollBar_Update();
   }
 }
 
-void Frame_UpData()
+void Frame_Update()
 {
-  moveProcess_Frame = 0.0;
+  moveProcess_FrameY = 0.0;
+  moveProcess_FrameWidth = 0.0;
+
   frameY.lastVal = frameY.targetVal;
   frameWidth.lastVal = frameWidth.targetVal;
   
@@ -427,7 +464,7 @@ void Frame_UpData()
   frameWidth.targetVal = currentMenu->items[currentMenu->currentItemIndex].len * 6 + 4;
 }
 
-void Screen_UpData()
+void Screen_Update()
 {
   if (currentMenu->currentItemIndex > screenIndex.bottomIndex)
   {
@@ -445,10 +482,59 @@ void Screen_UpData()
   screenTop.lastVal = screenTop.targetVal;
 
   screenTop.targetVal = screenIndex.topIndex * MENU_ITEM_HEIGHT;
-
 }
 
-uint8_t Screen_Move(UIContextTypedef *screenTop, float moveSpeed)
+
+void ScrollBar_Update(void)
+{
+  moveProcess_ScrollBar = 0.0;
+  
+  float moveRangef = (float)((OLED_SCREEN_HEIGHT - 4) - (OLED_SCREEN_HEIGHT * 2) / currentMenu->itemCount) / (currentMenu->itemCount - 1);
+  int moveRange = (int)(moveRangef + 0.5f);
+  scrollBarY.lastVal = scrollBarY.val;
+  if (currentMenu->currentItemIndex == currentMenu->itemCount - 1)
+  {
+    scrollBarY.targetVal = OLED_SCREEN_HEIGHT - 2 - (OLED_SCREEN_HEIGHT * 2) / currentMenu->itemCount;
+  }
+  else
+  {
+    scrollBarY.targetVal = (currentMenu->currentItemIndex * moveRange) + 2;
+  }
+}
+
+uint8_t UI_Move(UIElemTypedef *elem, float *moveProcess, float moveSpeed)
+{
+  if (*moveProcess < 1.0)
+  {
+    *moveProcess += moveSpeed;
+  }
+  if (*moveProcess > 1.0)
+  {
+    *moveProcess = 1.0;
+  } 
+
+  float easedProcess = easeInOut(*moveProcess);
+
+  // for (int i =0; i < sizeOfElemList; i++)
+  // {
+    
+  // }
+
+  elem->val = (int16_t)((1.0 - easedProcess) * elem->lastVal + easedProcess * elem->targetVal);
+
+  if (*moveProcess == 1.0)
+  {
+    elem->val = elem->targetVal;
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+
+uint8_t Screen_Move(UIElemTypedef *screenTop, float moveSpeed)
 {
   if (moveProcess_Screen < 1.0)
   {
@@ -474,50 +560,61 @@ uint8_t Screen_Move(UIContextTypedef *screenTop, float moveSpeed)
   }
 }
 
-uint8_t Frame_Move(UIContextTypedef *frameY, UIContextTypedef *frameWidth, float moveSpeed)
-{
+// uint8_t Frame_Move(UIElemTypedef *frameY, UIElemTypedef *frameWidth, float moveSpeed)
+// {
 
-  if (moveProcess_Frame < 1.0)
-  {
-    moveProcess_Frame += moveSpeed;
-  }
-  if (moveProcess_Frame > 1.0)
-  {
-    moveProcess_Frame = 1.0;
-  }
+//   if (moveProcess_Frame < 1.0)
+//   {
+//     moveProcess_Frame += moveSpeed;
+//   }
+//   if (moveProcess_Frame > 1.0)
+//   {
+//     moveProcess_Frame = 1.0;
+//   }
 
-  float easedProcess = easeInOut(moveProcess_Frame);
+//   float easedProcess = easeInOut(moveProcess_Frame);
 
-  frameY->val = (int16_t)((1.0 - easedProcess) * frameY->lastVal + easedProcess * frameY->targetVal);
-  frameWidth->val = (int16_t)((1.0 - easedProcess) * frameWidth->lastVal + easedProcess * frameWidth->targetVal);
+//   frameY->val = (int16_t)((1.0 - easedProcess) * frameY->lastVal + easedProcess * frameY->targetVal);
+//   frameWidth->val = (int16_t)((1.0 - easedProcess) * frameWidth->lastVal + easedProcess * frameWidth->targetVal);
 
-  // frameY->val += (int16_t)((frameY->targetVal - frameY->val) * moveProcess);
-  // frameWidth->val += (int16_t)((frameWidth->targetVal - frameWidth->val) * moveProcess);
+//   // frameY->val += (int16_t)((frameY->targetVal - frameY->val) * moveProcess);
+//   // frameWidth->val += (int16_t)((frameWidth->targetVal - frameWidth->val) * moveProcess);
 
-  if (moveProcess_Frame == 1.0)
-  {
-    frameY->val = frameY->targetVal;
-    frameWidth->val = frameWidth->targetVal;
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
+//   if (moveProcess_Frame == 1.0)
+//   {
+//     frameY->val = frameY->targetVal;
+//     frameWidth->val = frameWidth->targetVal;
+//     return 1;
+//   }
+//   else
+//   {
+//     return 0;
+//   }
 
-}
+// }
 
 void UI_Show()
 {
   OLED_NewFrame();
+
   for (int i = -1; i < 5; i++)
   {
     OLED_PrintASCIIString(2, screenTop.targetVal - screenTop.val + (i * MENU_ITEM_HEIGHT) + 4, currentMenu->items[i + screenIndex.topIndex].str, &afont8x6, OLED_COLOR_NORMAL); 
   }
+
   OLED_DrawFilledRectangleWithCorners(0, frameY.val + 1 - (screenIndex.topIndex * MENU_ITEM_HEIGHT), frameWidth.val, MENU_ITEM_HEIGHT - 2, OLED_COLOR_REVERSED); 
-  Draw_ScrollBar(screenTop.targetVal, currentMenu->itemCount, 4, currentMenu->currentItemIndex);
+  // Draw_ScrollBar(screenTop.targetVal, currentMenu->itemCount, 4, currentMenu->currentItemIndex);
+
+  OLED_DrawRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN - 2, 0, 6, OLED_SCREEN_HEIGHT - 1, OLED_COLOR_NORMAL);
+  OLED_DrawFilledRectangle(OLED_SCREEN_WIDTH - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN,
+                            scrollBarY.val,
+                            SCROLLBAR_WIDTH,
+                            (OLED_SCREEN_HEIGHT * 2) / currentMenu->itemCount,
+                            OLED_COLOR_NORMAL);
   OLED_ShowFrame();
 }
+
+
 
 float easeInOut(float t) 
 {
