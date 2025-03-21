@@ -3,18 +3,18 @@
         {
             "name": "Oled_UI_F103VET6",
             "includePath": [
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Core\\Inc",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Inc",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Drivers\\CMSIS\\Device\\ST\\STM32F1xx\\Include",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Drivers\\CMSIS\\Include",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Core\\Inc",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Inc",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Drivers\\CMSIS\\Device\\ST\\STM32F1xx\\Include",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Drivers\\CMSIS\\Include",
                 "D:\\stm32\\ARM\\ARMCLANG\\include",
                 "D:\\stm32\\ARM\\ARMCLANG\\include\\arm_linux",
                 "D:\\stm32\\ARM\\ARMCLANG\\include\\arm_linux_compat",
                 "D:\\stm32\\ARM\\ARMCLANG\\include\\libcxx",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\MDK-ARM",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Core\\Src",
-                "d:\\stm32\\Project_keil\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Src"
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\MDK-ARM",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Core\\Src",
+                "d:\\stm32\\PlatformIO\\Test\\Oled_UI_F103VET6\\Drivers\\STM32F1xx_HAL_Driver\\Src"
             ],
             "defines": [
                 "USE_HAL_DRIVER",
